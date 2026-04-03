@@ -28,8 +28,8 @@ hideSummary: false
 ### **Previously on worktrees...**
 
 In the [previous post]({{< ref "/posts/git-worktree-workflow" >}}),
-I introduced a workflow for running `datalad run` commands in a
-dedicated git worktree while continuing development in the main worktree.
+I introduced a workflow for running [`datalad run`](https://docs.datalad.org/en/stable/generated/man/datalad-run.html) commands in a
+dedicated git worktree in a different branch while continuing development in the main worktree.
 The batch-processing script was a plain bash loop —
 it got the job done, but it had no notion of what had already run,
 what was stale, or what depended on what. If the script failed half-way,
@@ -45,11 +45,12 @@ Enter [Snakemake](https://snakemake.readthedocs.io/).
 
 Snakemake is a workflow management system that thinks in terms of
 **rules** and **files**.
+Those are declared in a text file, called `Snakefile`, which we can conveniently commit and manage in the same repository.
 Each rule declares its inputs, outputs,
 and the shell command that transforms one into the other.
 (Sounds familiar? If you've crafted your `datalad run` commands properly, 
 then half of the work is already done!)
-Snakemake builds a directed acyclic graph (DAG)
+Snakemake builds a [directed acyclic graph (DAG)](https://en.wikipedia.org/wiki/Directed_acyclic_graph)
 of all the rules needed to produce the requested targets,
 and then executes only the rules whose outputs are missing
 or outdated (i.e. older than inputs).
@@ -73,7 +74,7 @@ Together they give me:
   Every step is a `datalad run` commit
   with full input/output tracking
 
-Here is a simplified view of my pipeline DAG:
+Here is a simplified view of my pipeline DAG (I do [some cool neuroscience](...link to research page...)) but nothing presented below is specific to it) :
 
 ```mermaid
 graph TD
@@ -132,7 +133,7 @@ rule fissa:
         datalad run \
             --explicit \
             -m "fissa {wildcards.subject} {wildcards.experiment}" \
-            -i "01_suite2p/{wildcards.subject}/{wildcards.experiment}/plane0/reg_tif/*.tif" \
+            -i "{input.reg_tif}" \
             -i "{input.allcell}" \
             -o "03_fissa/{wildcards.subject}/{wildcards.experiment}/plane0/roiset-suite2p" \
             "./code/src/process2p/run_fissa.py {{inputs}} {{outputs}}"
@@ -169,7 +170,7 @@ explicitly listed in `-i` and `-o`,
 skipping the global cleanliness check.
 To ensure full reproducibility, I recommend running snakemake only
 when the state of the dataset is clean and adding a dedicated check
-right at the start of the snakefile:
+right at the start of the `Snakefile` (remember? -- it is *all Python*!):
 ```
 # ── Pre-flight: dataset must be clean ─────────────────────────────────────────
 # Runs at parse time (before Snakemake removes stale outputs).
@@ -328,4 +329,4 @@ graph TD
 | Always run Snakemake in the worktree   | Timestamps are per-worktree, not per-commit                     | Don't mix execution locations          |
 | Dirty working tree upon `datalad run`  | Snakemake deletes stale outputs before running                  | `--explicit` + pre-flight status check |
 
-Happy automating! :snake:
+Happy automating! 🐍
